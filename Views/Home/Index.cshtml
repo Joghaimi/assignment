@@ -1,0 +1,151 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+@model IEnumerable<Units>
+
+
+    <div class="row">
+        <div class ="col-3" >
+            <div class="col-12">
+                <input class="btnGetCheckedItem" value="Get all checked items" type="button" />
+                <input class="btnGetAll" value="Get allitems" type="button" />
+            </div>
+            <div id="Units"class="col-12" >
+                <ul>
+                @foreach (Units item in Model)
+                {
+                                                                                                        <li id="@item.unitId"> @item.unitName</li>
+                }
+                </ul>
+
+            </div>
+
+
+
+        </div>
+        <div class="col-8" >
+            <table id="employeeTable" class="display">
+
+            </table>
+        </div>
+
+    </div>
+
+@section Scripts{
+    <script>
+
+        //$('#employeeTable').dataTable();
+    $(document).ready(function() {
+    $('#employeeTable').DataTable({
+         "columns": [
+                    {"data":"fullName", "title": 'Full Name' },
+                    { "data":"number", "title": 'Phone Number' },
+                    { "data":"email","title": 'Email' },
+                    { "data":"jobTitle","title": 'Job Title.' },
+                    { "data":"country","title": 'Country' }
+                ],
+        });
+     });
+        // Data Table 
+        $('.btnGetCheckedItem').click(function(){
+            //
+                var checked_ids = []; 
+                var checked_idsString = ""; 
+                var selectedNodes = $('#Units').jstree("get_selected", true);
+                $.each(selectedNodes, function() {
+                    checked_ids.push(this.id);
+                    checked_idsString+=this.id+",";
+                });
+                renderTable(`https://localhost:7278/Home/getEmployees?ids=${checked_idsString}`);
+
+                // get employee info
+                //var table = $('#employeeTable').DataTable();
+                //$.ajax({
+                //    type: 'GET',
+                //    url: '@Url.Action("getEmployees","Home")',
+                //    dataType: 'json',
+                //    contentType: 'application/json',
+                //    data: {ids:checked_idsString } ,
+                //    success:function (result){
+                //        //table.clear().draw();
+                //        for(var i = 0; i < result.length; i++) {
+                //        var obj = result[i];
+                //         //table.row.add( [ obj.fullName, obj.number,obj.email, obj.jobTitle ,obj.country ] ).draw().node();
+                //        }
+                //    }
+
+                //});
+            });
+        // Get All Users
+        $('.btnGetAll').click(function(){
+            renderTable("https://localhost:7278/Home/getAllEmployees")
+        });
+
+
+
+
+
+        $("#Units").jstree({
+            "core": {
+                "check_callback": true,
+            },
+            "plugins" : [ "checkbox" ]
+        })
+         $('#Units').on("select_node.jstree", function (e, data) { 
+            showChildren(data.node.id);
+
+        });
+        function showChildren(parentid){
+
+            var children = $("#Units").jstree(true).get_node(parentid).children;
+            $("#Units").jstree(true).delete_node(children);
+            $.ajax({
+                type: 'GET',
+                url: '@Url.Action("getUnits","Home")',
+                dataType: 'json',
+                contentType: 'application/json',
+                data: {id: parentid } ,
+                success:function (result){
+                    console.log(result);
+                    $('#'+parentid).attr('test', 'teat') 
+                    for(var i = 0; i < result.length; i++) {
+                        var obj = result[i];
+                        $('#Units').jstree().create_node(parentid, {
+                            "id": obj.unitId,
+                            "text": obj.unitName
+                        })
+                    }
+                }
+            });
+        }
+        function jsonToTreeElement(jsonElement){
+            var htmlElement = "";
+            for(var i = 0; i < jsonElement.length; i++) {
+                 var obj = jsonElement[i];
+                 htmlElement+=`</ul>${obj.unitName}<li id="${obj.unitId}" onclick="showChildren(${obj.unitId})"></li></ul>`;
+             }
+            return htmlElement;
+        }
+        function renderTable(requestURL){
+            $('#employeeTable').DataTable({
+                "columns": [
+                    {"data":"fullName", "title": 'Full Name' },
+                    { "data":"number", "title": 'Phone Number' },
+                    { "data":"email","title": 'Email' },
+                    { "data":"jobTitle","title": 'Job Title.' },
+                    { "data":"country","title": 'Country' }
+                    ],
+                "deferRender": true,
+                "ajax" :{
+                    "url":requestURL,
+                    "datatype":"json",
+                },
+                "pageLength": 20,
+                "processing":true,
+                "serverSide":true,
+                "filter":false,   
+                    "bDestroy": true,
+                });
+         }
+    </script>
+}
